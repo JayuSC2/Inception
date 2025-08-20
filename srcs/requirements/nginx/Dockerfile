@@ -1,11 +1,12 @@
-FROM nginx:1.26.1-alpine
+FROM debian:bullseye
 
-# The nginx:alpine image uses the 'apk' package manager.
-# Install openssl so we can generate certificates.
-RUN apk update && apk add --no-cache openssl
+# Use Debian's package manager 'apt-get' to install nginx and openssl
+RUN apt-get update && apt-get install -y nginx openssl
 
 # Copy your custom nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
+
+RUN rm -f /etc/nginx/sites-enabled/default
 
 # Copy the startup script into the container
 COPY entrypoint.sh /entrypoint.sh
