@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mariadb:
+    build:
+      context: ./srcs/requirements/mariadb
+    networks:
+      - inception_net
+    volumes:
+      # This mounts the 'db_data' volume to the directory where MariaDB stores its data.
+      - db_data:/var/lib/mysql
+    # You will also need environment variables here to set up the database
+    # env_file: .env
+
+  wordpress:
+    build:
+      context: ./srcs/requirements/wordpress
+    networks:
+      - inception_net
+    volumes:
+      # This mounts the 'wp_files' volume to the directory where WordPress files live.
+      - wp_files:/var/www/html
+    depends_on:
+      - mariadb
+    # env_file: .env
+
+  nginx:
+    build:
+      context: ./srcs/requirements/nginx
+    ports:
+      - "443:443"
+    networks:
+      - inception_net
+    volumes:
+      # Nginx also needs access to the WordPress files to serve static assets (images, CSS).
+      # We mount the SAME volume here.
+      - wp_files:/var/www/html
+    depends_on:
+      - wordpress
+
+networks:
+  inception_net:
+    driver: bridge
+
+# This is where you declare the volumes. Docker will create and manage them.
+volumes:
+  db_data:
+  wp_files:
