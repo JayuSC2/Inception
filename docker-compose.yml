@@ -1,28 +1,37 @@
-version: '3.8'
-
 services:
   mariadb:
     build:
       context: ./srcs/requirements/mariadb
+    env_file: .env # Loads MYSQL_DATABASE and MYSQL_USER
+    environment:
+      # These point to the files mounted below.
+      # Your MariaDB startup script will need to read these files.
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+    volumes:
+      - /juitz/login/data/mariadb:/var/lib/mysql
+      # Mount the secret files as read-only into the container
+      - ./secrets/db_password.txt:/run/secrets/db_password:ro
+      - ./secrets/db_root_password.txt:/run/secrets/db_root_password:ro
     networks:
       - inception_net
-    volumes:
-      # This mounts the 'db_data' volume to the directory where MariaDB stores its data.
-      - db_data:/var/lib/mysql
-    # You will also need environment variables here to set up the database
-    # env_file: .env
+    restart: always
 
   wordpress:
     build:
       context: ./srcs/requirements/wordpress
-    networks:
-      - inception_net
+    env_file: .env # Loads DB_HOST, DB_NAME, DB_USER
+    environment:
+      # Your WordPress startup script will need to read this file.
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
     volumes:
-      # This mounts the 'wp_files' volume to the directory where WordPress files live.
-      - wp_files:/var/www/html
+      - /juitz/login/data/wordpress:/var/www/html
+      - ./secrets/db_password.txt:/run/secrets/db_password:ro
     depends_on:
       - mariadb
-    # env_file: .env
+    networks:
+      - inception_net
+    restart: always
 
   nginx:
     build:
@@ -34,15 +43,10 @@ services:
     volumes:
       # Nginx also needs access to the WordPress files to serve static assets (images, CSS).
       # We mount the SAME volume here.
-      - wp_files:/var/www/html
+      - /juitz/login/data/wordpress:/var/www/html
     depends_on:
       - wordpress
 
 networks:
   inception_net:
     driver: bridge
-
-# This is where you declare the volumes. Docker will create and manage them.
-volumes:
-  db_data:
-  wp_files:
