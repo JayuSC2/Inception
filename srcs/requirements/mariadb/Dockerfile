@@ -1,6 +1,7 @@
 FROM debian:Bullseye
 
-RUN apt-get update && apt-get install -y mariadb-server mariadb-client
+RUN apt-get update && apt-get install -y mariadb-server mariadb-client \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Copy the startup script that will initialize the database
 COPY entrypoint.sh /entrypoint.sh

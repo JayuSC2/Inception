@@ -1,7 +1,8 @@
 FROM debian:bullseye
 
 # Use Debian's package manager 'apt-get' to install nginx and openssl
-RUN apt-get update && apt-get install -y nginx openssl
+RUN apt-get update && apt-get install -y nginx openssl \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Copy your custom nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
