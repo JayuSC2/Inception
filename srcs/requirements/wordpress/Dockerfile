@@ -37,4 +37,11 @@ EXPOSE 9000
 # 7. Set the default command to start the PHP-FPM service.
 #    The '-F' (or --nodaemonize) flag is critical. It forces PHP-FPM to run in the
 #    foreground, which is required for a container's main process to keep it alive.
+
+RUN mkdir -p /run/php && chown www-data:www-data /run/php
+
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
+
 CMD ["php-fpm7.4", "-F"]

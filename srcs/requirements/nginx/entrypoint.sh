@@ -1,3 +1,5 @@
+#!/bin/bash
+
 CERT_PATH="/etc/nginx/ssl/nginx.crt"
 KEY_PATH="/etc/nginx/ssl/nginx.key"
 
