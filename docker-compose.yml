@@ -43,7 +43,7 @@ services:
     volumes:
       # Nginx also needs access to the WordPress files to serve static assets (images, CSS).
       # We mount the SAME volume here.
-      - /juitz/login/data/wordpress:/var/www/html
+      - /home/juitz/login/data/wordpress:/var/www/html
     depends_on:
       - wordpress
 

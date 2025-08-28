@@ -1,7 +1,9 @@
+#!/bin/bash
+
 DATA_DIR="/var/lib/mysql"
 
 # Check if the database is already initialized by looking for the wordpress directory
-if [ ! -d "$DATA_DIR/$MYSQL_DATABASE" ]; then
+if [ ! -d "$DATA_DIR/mysql" ]; then
     echo "Database not found. Initializing..."
 
     # 1. Initialize the MariaDB data directory
@@ -32,7 +34,7 @@ if [ ! -d "$DATA_DIR/$MYSQL_DATABASE" ]; then
         CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
         GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
         FLUSH PRIVILEGES;
-    EOF
+EOF
 
     # 6. Stop the temporary server
     mysqladmin -u root -p"${DB_ROOT_PASSWORD}" shutdown
@@ -43,4 +45,6 @@ fi
 # Start the MariaDB server in the foreground.
 # 'exec' replaces the script process with the mysqld process.
 echo "Starting MariaDB..."
+mkdir -p /run/mysqld
+chown mysql:mysql /run/mysqld
 exec mysqld --user=mysql --datadir="$DATA_DIR"
