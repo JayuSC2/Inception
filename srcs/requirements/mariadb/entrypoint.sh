@@ -10,7 +10,7 @@ if [ ! -d "$DATA_DIR/mysql" ]; then
     mysql_install_db --user=mysql --datadir="$DATA_DIR"
 
     # 2. Start the MariaDB server in the background temporarily
-    mysqld --user=mysql --datadir="$DATA_DIR" --skip-networking &
+    mysqld --user=mysql --datadir="$DATA_DIR" &
     PID=$! # Get the process ID of the server
 
     # 3. Wait for the server to be ready for connections

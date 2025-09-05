@@ -9,7 +9,7 @@ services:
       MYSQL_PASSWORD_FILE: /run/secrets/db_password
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
     volumes:
-      - /home/juitz/login/data/mariadb:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
       # Mount the secret files as read-only into the container
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
       - ./secrets/db_root_password.txt:/run/secrets/db_root_password:ro
@@ -20,12 +20,14 @@ services:
   wordpress:
     build:
       context: ./srcs/requirements/wordpress
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: ["php-fpm7.4", "-F"]
     env_file: .env # Loads DB_HOST, DB_NAME, DB_USER
     environment:
       # Your WordPress startup script will need to read this file.
       WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
     volumes:
-      - /home/juitz/login/data/wordpress:/var/www/html
+      - wordpress_data:/var/www/html
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
     depends_on:
       - mariadb
@@ -37,16 +39,20 @@ services:
     build:
       context: ./srcs/requirements/nginx
     ports:
-      - "443:443"
+      - "8443:443"
     networks:
       - inception_net
     volumes:
       # Nginx also needs access to the WordPress files to serve static assets (images, CSS).
       # We mount the SAME volume here.
-      - /home/juitz/login/data/wordpress:/var/www/html
+      - wordpress_data:/var/www/html
     depends_on:
       - wordpress
 
 networks:
   inception_net:
     driver: bridge
+
+volumes:
+  mariadb_data:
+  wordpress_data:
