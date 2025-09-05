@@ -1,14 +1,23 @@
 #!/bin/bash
 
+set -e
+
 # Define the WordPress path
 WP_PATH="/var/www/html"
 
-# Wait a bit for MariaDB to be ready
-sleep 10
+echo "Waiting for MariaDB to be ready..."
+for i in {1..30}; do
+    if wp db check --path="$WP_PATH" --allow-root --dbhost="mariadb" --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" > /dev/null 2>&1; then
+        echo "MariaDB is up and running!"
+        break
+    fi
+    echo "MariaDB not ready yet... waiting..."
+    sleep 1
+done
 
 # Check if WordPress is already installed
-if ! wp core is-installed --path="$WP_PATH" --allow-root; then
-    echo "WordPress not found. Installing..."
+if [ ! -f "$WP_PATH/wp-config.php" ]; then
+    echo "WordPress not found. Starting fresh installation..."
 
     # Download WordPress core files
     wp core download --path="$WP_PATH" --allow-root
@@ -18,7 +27,7 @@ if ! wp core is-installed --path="$WP_PATH" --allow-root; then
         --dbname="$MYSQL_DATABASE" \
         --dbuser="$MYSQL_USER" \
         --dbpass="$MYSQL_PASSWORD" \
-        --dbhost="mariadb" \
+        --dbhost="mariadb:3306" \
         --allow-root
 
     # Install WordPress

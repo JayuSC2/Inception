@@ -25,7 +25,7 @@ RUN sed -i 's#;error_log = log/php-fpm.log#error_log = /proc/self/fd/2#' /etc/ph
 # Ensure workers output is caught
 RUN sed -i 's#;catch_workers_output = yes#catch_workers_output = yes#' /etc/php/7.4/fpm/pool.d/www.conf
 # Set listen port
-RUN sed -i 's/listen = \/run\/php\/php7.4-fpm.sock/listen = 9000/' /etc/php/7.4/fpm/pool.d/www.conf
+RUN sed -i 's/listen = \/run\/php\/php7.4-fpm.sock/listen = 0.0.0.0:9000/' /etc/php/7.4/fpm/pool.d/www.conf
 
 # 5. Set up entrypoint
 COPY entrypoint.sh /usr/local/bin/
