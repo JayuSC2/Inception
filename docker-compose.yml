@@ -2,15 +2,13 @@ services:
   mariadb:
     build:
       context: ./srcs/requirements/mariadb
-    env_file: .env # Loads MYSQL_DATABASE and MYSQL_USER
+    env_file: .env
     environment:
-      # These point to the files mounted below.
-      # Your MariaDB startup script will need to read these files.
       MYSQL_PASSWORD_FILE: /run/secrets/db_password
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
     volumes:
-      - mariadb_data:/var/lib/mysql
-      # Mount the secret files as read-only into the container
+      # Use a bind mount to the specific host directory
+      - /home/juitz/data/mariadb:/var/lib/mysql
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
       - ./secrets/db_root_password.txt:/run/secrets/db_root_password:ro
     networks:
@@ -20,12 +18,12 @@ services:
   wordpress:
     build:
       context: ./srcs/requirements/wordpress
-    env_file: .env # Loads DB_HOST, DB_NAME, DB_USER
+    env_file: .env
     environment:
-      # Your WordPress startup script will need to read this file.
       WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
     volumes:
-      - wordpress_data:/var/www/html
+      # Use a bind mount to the specific host directory
+      - /home/juitz/data/wordpress:/var/www/html
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
     depends_on:
       - mariadb
@@ -41,9 +39,8 @@ services:
     networks:
       - inception_net
     volumes:
-      # Nginx also needs access to the WordPress files to serve static assets (images, CSS).
-      # We mount the SAME volume here.
-      - wordpress_data:/var/www/html
+      # Nginx also needs access to the WordPress files. Mount the same host directory.
+      - /home/juitz/data/wordpress:/var/www/html
     depends_on:
       - wordpress
 
@@ -51,6 +48,6 @@ networks:
   inception_net:
     driver: bridge
 
-volumes:
-  wordpress_data:
-  mariadb_data:
+# volumes:
+#   wordpress_data:
+#   mariadb_data:
