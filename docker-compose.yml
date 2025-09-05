@@ -7,7 +7,6 @@ services:
       MYSQL_PASSWORD_FILE: /run/secrets/db_password
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
     volumes:
-      # Use a bind mount to the specific host directory
       - /home/juitz/data/mariadb:/var/lib/mysql
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
       - ./secrets/db_root_password.txt:/run/secrets/db_root_password:ro
@@ -22,7 +21,6 @@ services:
     environment:
       WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
     volumes:
-      # Use a bind mount to the specific host directory
       - /home/juitz/data/wordpress:/var/www/html
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
     depends_on:
@@ -39,7 +37,6 @@ services:
     networks:
       - inception_net
     volumes:
-      # Nginx also needs access to the WordPress files. Mount the same host directory.
       - /home/juitz/data/wordpress:/var/www/html
     depends_on:
       - wordpress
