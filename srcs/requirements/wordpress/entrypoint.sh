@@ -1,48 +1,110 @@
 #!/bin/bash
 
+# Exit immediately if a command exits with a non-zero status
+set -e
+
 WP_PATH="/var/www/html"
 
+# Read the password from the secret file path provided by the environment variable
+DB_PASSWORD=$(cat "$WORDPRESS_DB_PASSWORD_FILE")
+
+# 1. Wait for the database to be ready before proceeding.
 echo "Waiting for MariaDB to be ready..."
 for i in {1..30}; do
-    if wp db check --path="$WP_PATH" --allow-root --dbhost="mariadb" --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" > /dev/null 2>&1; then
+    # Use the password we read from the file in the check
+    if wp db check --path="$WP_PATH" --allow-root --dbhost="mariadb" --dbuser="$MYSQL_USER" --dbpass="$DB_PASSWORD" > /dev/null 2>&1; then
         echo "MariaDB is up and running!"
         break
     fi
     echo "MariaDB not ready yet... waiting..."
     sleep 1
 done
-# Check if WordPress is already installed
-if ! wp core is-installed --path="$WP_PATH" --allow-root; then
-    echo "WordPress not found. Installing..."
 
-    wp core download --path="$WP_PATH" --allow-root
+# 2. Check if wp-config.php exists. If not, perform the first-time setup.
+# This is the correct way to check for a new installation.
+if [ ! -f "$WP_PATH/wp-config.php" ]; then
+    echo "wp-config.php not found. Configuring WordPress..."
 
+    # Create wp-config.php using the password from the secret file
     wp config create --path="$WP_PATH" \
         --dbname="$MYSQL_DATABASE" \
         --dbuser="$MYSQL_USER" \
-        --dbpass="$MYSQL_PASSWORD" \
+        --dbpass="$DB_PASSWORD" \
         --dbhost="mariadb" \
         --allow-root
 
+    # Install WordPress using the files already present from the Dockerfile
     wp core install --path="$WP_PATH" \
         --url="$DOMAIN_NAME" \
-        --title="My WordPress Site" \
+        --title="Inception" \
         --admin_user="$WP_ADMIN_USER" \
         --admin_password="$WP_ADMIN_PASSWORD" \
         --admin_email="$WP_ADMIN_EMAIL" \
         --allow-root
 
+    # Create a non-admin user
     wp user create "$WP_USER" "$WP_USER_EMAIL" \
         --role=author \
         --user_pass="$WP_USER_PASSWORD" \
         --path="$WP_PATH" \
         --allow-root
 
-    echo "WordPress installation complete."
+    echo "WordPress configuration complete."
 else
-    echo "WordPress is already installed."
+    echo "WordPress is already configured."
 fi
 
-# Start PHP-FPM in the foreground
+# 3. Start PHP-FPM in the foreground
 echo "Starting PHP-FPM..."
 exec php-fpm7.4 -F
+
+##!/bin/bash
+#
+#WP_PATH="/var/www/html"
+#DB_PASSWORD=$(cat "$WORDPRESS_DB_PASSWORD_FILE")
+#
+#echo "Waiting for MariaDB to be ready..."
+#for i in {1..30}; do
+#    if wp db check --path="$WP_PATH" --allow-root --dbhost="mariadb" --dbuser="$MYSQL_USER" --dbpass="$DB_PASSWORD" > /dev/null 2>&1; then
+#        echo "MariaDB is up and running!"
+#        break
+#    fi
+#    echo "MariaDB not ready yet... waiting..."
+#    sleep 1
+#done
+## Check if WordPress is already installed
+#if ! wp core is-installed --path="$WP_PATH" --allow-root; then
+#    echo "WordPress not found. Installing..."
+#
+#    wp core download --path="$WP_PATH" --allow-root
+#
+#    wp config create --path="$WP_PATH" \
+#        --dbname="$MYSQL_DATABASE" \
+#        --dbuser="$MYSQL_USER" \
+#        --dbpass="$DB_PASSWORD" \
+#        --dbhost="mariadb" \
+#        --allow-root
+#
+#    wp core install --path="$WP_PATH" \
+#        --url="$DOMAIN_NAME" \
+#        --title="My WordPress Site" \
+#        --admin_user="$WP_ADMIN_USER" \
+#        --admin_password="$WP_ADMIN_PASSWORD" \
+#        --admin_email="$WP_ADMIN_EMAIL" \
+#        --allow-root
+#
+#    wp user create "$WP_USER" "$WP_USER_EMAIL" \
+#        --role=author \
+#        --user_pass="$WP_USER_PASSWORD" \
+#        --path="$WP_PATH" \
+#        --allow-root
+#
+#    echo "WordPress installation complete."
+#else
+#    echo "WordPress is already installed."
+#fi
+#
+## Start PHP-FPM in the foreground
+#echo "Starting PHP-FPM..."
+#exec php-fpm7.4 -F
+
