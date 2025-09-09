@@ -9,66 +9,110 @@ DATA_DIR="/var/lib/mysql"
 if [ ! -d "$DATA_DIR/mysql" ]; then
     echo "Database not initialized. Starting first-time setup..."
 
+    # Read passwords from the secret files mounted by Docker Compose
+    export MYSQL_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
+    export MYSQL_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
+
     # Initialize the database directory
     mysql_install_db --user=mysql --datadir="$DATA_DIR"
 
-    # Start the server in the background to perform setup
-    mysqld --user=mysql --datadir="$DATA_DIR" &
-    PID=$!
+    # Create a temporary file to hold the processed SQL commands
+    TEMP_SQL_FILE=$(mktemp)
 
-    # Wait for the server to be ready
-    for i in {30..0}; do
-        if mysqladmin ping -h localhost --silent; then
-            break
-        fi
-        echo "Waiting for database server to start..."
-        sleep 1
-    done
-    if [ "$i" -eq 0 ]; then
-        echo "Database server failed to start."
-        exit 1
-    fi
+    # Substitute environment variables into the SQL script and write to the temp file
+    envsubst < /init.sql > "$TEMP_SQL_FILE"
 
-    # Read passwords from the secret files mounted by Docker Compose
-    MYSQL_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
-    MYSQL_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
+    # Initialize the database using the bootstrap method, which doesn't require a running server
+    mysqld --user=mysql --datadir="$DATA_DIR" --bootstrap < "$TEMP_SQL_FILE"
 
-    # Use a 'here document' to execute a series of SQL commands
-    mysql -u root <<EOF
-        -- Set the root password securely
-        ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
-        -- Create the WordPress database if it doesn't exist
-        CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
-        -- Create the WordPress user if it doesn't exist, allowing connection from any host ('%')
-        CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-        -- Grant all necessary privileges to the user for the WordPress database
-        GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
-        -- Apply the changes
-        FLUSH PRIVILEGES;
-EOF
-
-    # Stop the temporary server
-    if ! mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown; then
-        echo "Failed to shut down temporary database server."
-        kill -9 "$PID"
-    fi
+    # Clean up the temporary file
+    rm -f "$TEMP_SQL_FILE"
     
     echo "First-time database setup complete."
 else
     echo "Database already initialized. Skipping setup."
 fi
 
-# Clean up stale lock files from any previous unclean shutdown
-rm -f /var/lib/mysql/mysqld.pid
-rm -f /var/lib/mysql/aria_log_control
-
-# Create the run directory for the socket file
+# Create the run directory for the socket file if it doesn't exist
 mkdir -p /run/mysqld
 chown -R mysql:mysql /run/mysqld
 
 # Start the MariaDB server in the foreground as the main container process
 echo "Starting MariaDB server..."
 exec mysqld --user=mysql --datadir="$DATA_DIR"
+
+#!/bin/bash
+
+## Exit immediately if a command exits with a non-zero status
+#set -e
+#
+#DATA_DIR="/var/lib/mysql"
+#
+## This script only runs on the first-time creation of the volume.
+#if [ ! -d "$DATA_DIR/mysql" ]; then
+#    echo "Database not initialized. Starting first-time setup..."
+#
+#    # Initialize the database directory
+#    mysql_install_db --user=mysql --datadir="$DATA_DIR"
+#
+#    # Start the server in the background to perform setup
+#    mysqld --user=mysql --datadir="$DATA_DIR" &
+#    PID=$!
+#
+#    # Wait for the server to be ready
+#    for i in {30..0}; do
+#        if mysqladmin ping -h localhost --silent; then
+#            break
+#        fi
+#        echo "Waiting for database server to start..."
+#        sleep 1
+#    done
+#    if [ "$i" -eq 0 ]; then
+#        echo "Database server failed to start."
+#        exit 1
+#    fi
+#
+#    # Read passwords from the secret files mounted by Docker Compose
+#    MYSQL_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
+#    MYSQL_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
+#
+#    # Use a 'here document' to execute a series of SQL commands
+#    mysql -u root <<EOF
+#        -- Set the root password securely
+#        ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+#        -- Create the WordPress database if it doesn't exist
+#        CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+#        -- Create the WordPress user if it doesn't exist, allowing connection from any host ('%')
+#        CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+#        -- Grant all necessary privileges to the user for the WordPress database
+#        GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+#        -- Apply the changes
+#        FLUSH PRIVILEGES;
+#EOF
+#
+#    # Stop the temporary server
+#    if ! mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown; then
+#        echo "Failed to shut down temporary database server."
+#        kill -9 "$PID"
+#    fi
+#    
+#    echo "First-time database setup complete."
+#else
+#    echo "Database already initialized. Skipping setup."
+#fi
+#
+## Clean up stale lock files from any previous unclean shutdown
+#rm -f /var/lib/mysql/mysqld.pid
+#rm -f /var/lib/mysql/aria_log_control
+#
+## Create the run directory for the socket file
+#mkdir -p /run/mysqld
+#chown -R mysql:mysql /run/mysqld
+#
+## Start the MariaDB server in the foreground as the main container process
+#echo "Starting MariaDB server..."
+#exec mysqld --user=mysql --datadir="$DATA_DIR"
+
 ##!/bin/bash
 #
 #set -e 
