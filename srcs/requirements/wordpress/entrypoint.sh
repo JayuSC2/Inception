@@ -21,8 +21,10 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
 
     # Wait for MariaDB to be ready by trying to connect with our credentials
     echo "Waiting for MariaDB database..."
-    until mysql -h mariadb -u "${MYSQL_USER}" -p"${DB_PASSWORD}" -e 'SELECT 1;' &> /dev/null; do
+    # The 'mysql' command will fail until the database is ready and the user is created.
+    until mysql -h"mariadb" -u"${MYSQL_USER}" -p"${DB_PASSWORD}" -e "quit" > /dev/null 2>&1; do
         sleep 1
+        echo -n "."
     done
     echo "MariaDB is ready."
 

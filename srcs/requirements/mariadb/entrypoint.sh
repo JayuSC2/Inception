@@ -1,44 +1,50 @@
 #!/bin/bash
-
-# Exit immediately if a command exits with a non-zero status
 set -e
 
 DATA_DIR="/var/lib/mysql"
 
-# This script only runs on the first-time creation of the volume.
+# Check if the database is already initialized.
+# We check for the 'mysql' system database directory.
 if [ ! -d "$DATA_DIR/mysql" ]; then
-    echo "Database not initialized. Starting first-time setup..."
+    echo "Database not found. Initializing..."
 
-    # Read passwords from the secret files mounted by Docker Compose
-    export MYSQL_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
-    export MYSQL_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
-
-    # Initialize the database directory
+    # 1. Initialize the MariaDB data directory.
+    # This creates the base files and system tables.
     mysql_install_db --user=mysql --datadir="$DATA_DIR"
 
-    # Create a temporary file to hold the processed SQL commands
-    TEMP_SQL_FILE=$(mktemp)
+    # 2. Start the MariaDB server in the background with networking enabled.
+    # This ensures it respects the 'bind-address' from your .cnf file.
+    # We use 'exec' in a subshell to ensure proper signal handling.
+    ( exec mysqld --user=mysql --datadir="$DATA_DIR" ) &
+    PID=$!
 
-    # Substitute environment variables into the SQL script and write to the temp file
-    envsubst < /init.sql > "$TEMP_SQL_FILE"
+    # 3. Wait for the server to be ready for connections.
+    until mysqladmin ping >/dev/null 2>&1; do
+        echo -n "."; sleep 1
+    done
+    echo " MariaDB is ready for setup."
 
-    # Initialize the database using the bootstrap method, which doesn't require a running server
-    mysqld --user=mysql --datadir="$DATA_DIR" --bootstrap < "$TEMP_SQL_FILE"
+    # 4. Read passwords from the secret files.
+    DB_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
+    DB_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
 
-    # Clean up the temporary file
-    rm -f "$TEMP_SQL_FILE"
-    
-    echo "First-time database setup complete."
-else
-    echo "Database already initialized. Skipping setup."
+    # 5. Execute the initialization SQL script.
+    # This is more robust than a heredoc for complex scripts.
+    # We replace variables in the script and pipe it to the mysql client.
+    sed -e "s/\${MYSQL_DATABASE}/$MYSQL_DATABASE/" \
+        -e "s/\${MYSQL_USER}/$MYSQL_USER/" \
+        -e "s/\${MYSQL_PASSWORD}/$DB_PASSWORD/" \
+        -e "s/\${MYSQL_ROOT_PASSWORD}/$DB_ROOT_PASSWORD/" /init.sql | mysql -u root
+
+    # 6. Stop the temporary server.
+    # We use the root password we just set.
+    mysqladmin -u root -p"$DB_ROOT_PASSWORD" shutdown
+    wait $PID
+    echo "Database initialization complete."
 fi
 
-# Create the run directory for the socket file if it doesn't exist
-mkdir -p /run/mysqld
-chown -R mysql:mysql /run/mysqld
-
-# Start the MariaDB server in the foreground as the main container process
-echo "Starting MariaDB server..."
+# Start the final MariaDB server in the foreground.
+echo "Starting MariaDB..."
 exec mysqld --user=mysql --datadir="$DATA_DIR"
 
 #!/bin/bash

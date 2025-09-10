@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     php7.4 \
     php7.4-fpm \
     php7.4-mysql \
+    mariadb-client \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
@@ -19,6 +20,7 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 
 RUN mkdir -p /var/www/html
 
+RUN mkdir -p /run/php && chown www-data:www-data /run/php
 # 4. Configure PHP-FPM for Docker logging
 # Force logs to stderr
 RUN sed -i 's#;error_log = log/php-fpm.log#error_log = /proc/self/fd/2#' /etc/php/7.4/fpm/php-fpm.conf
