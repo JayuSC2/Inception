@@ -1,7 +1,7 @@
 services:
   mariadb:
     build:
-      context: ./srcs/requirements/mariadb
+      context: ./requirements/mariadb
     container_name: mariadb
     env_file: .env
     environment:
@@ -9,15 +9,15 @@ services:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
     volumes:
       - /home/juitz/data/mariadb:/var/lib/mysql
-      - ./secrets/db_password.txt:/run/secrets/db_password:ro
-      - ./secrets/db_root_password.txt:/run/secrets/db_root_password:ro
+      - ../secrets/db_password.txt:/run/secrets/db_password:ro
+      - ../secrets/db_root_password.txt:/run/secrets/db_root_password:ro
     networks:
       - inception_net
     restart: always
 
   wordpress:
     build:
-      context: ./srcs/requirements/wordpress
+      context: ./requirements/wordpress
     container_name: wordpress
     env_file: .env
     environment:
@@ -26,9 +26,9 @@ services:
       WP_USER_PASSWORD_FILE: /run/secrets/wp_user_password
     volumes:
       - /home/juitz/data/wordpress:/var/www/html
-      - ./secrets/db_password.txt:/run/secrets/db_password:ro
-      - ./secrets/wp_admin_password.txt:/run/secrets/wp_admin_password:ro
-      - ./secrets/wp_user_password.txt:/run/secrets/wp_user_password:ro
+      - ../secrets/db_password.txt:/run/secrets/db_password:ro
+      - ../secrets/wp_admin_password.txt:/run/secrets/wp_admin_password:ro
+      - ../secrets/wp_user_password.txt:/run/secrets/wp_user_password:ro
     depends_on:
       - mariadb
     networks:
@@ -37,7 +37,7 @@ services:
 
   nginx:
     build:
-      context: ./srcs/requirements/nginx
+      context: ./requirements/nginx
     container_name: nginx
     ports:
       - "443:443"

@@ -1,13 +1,17 @@
+COMPOSE_FILE = srcs/docker-compose.yml
+
 up:
-	docker compose up	-d	--build
+	docker compose --file $(COMPOSE_FILE) up -d --build
 
 down:
-	docker compose down
+	docker compose --file $(COMPOSE_FILE) down
 
 build:
-	docker compose	build
+	docker compose --file $(COMPOSE_FILE) build
 
 clean:
-	docker compose down -v
+	docker compose --file $(COMPOSE_FILE) down -v
 
-.PHONY: up down build clean
+re: clean up
+
+.PHONY: up down build clean re
