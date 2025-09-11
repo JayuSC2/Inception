@@ -27,6 +27,8 @@ services:
     volumes:
       - /home/juitz/data/wordpress:/var/www/html
       - ./secrets/db_password.txt:/run/secrets/db_password:ro
+      - ./secrets/wp_admin_password.txt:/run/secrets/wp_admin_password:ro
+      - ./secrets/wp_user_password.txt:/run/secrets/wp_user_password:ro
     depends_on:
       - mariadb
     networks:
