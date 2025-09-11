@@ -36,7 +36,7 @@ services:
       context: ./srcs/requirements/nginx
     container_name: nginx
     ports:
-      - "8443:443"
+      - "443:443"
     networks:
       - inception_net
     volumes:
