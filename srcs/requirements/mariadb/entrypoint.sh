@@ -29,8 +29,6 @@ if [ ! -d "$DATA_DIR/mysql" ]; then
     DB_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
 
     # 5. Execute the initialization SQL script.
-    # This is more robust than a heredoc for complex scripts.
-    # We replace variables in the script and pipe it to the mysql client.
     sed -e "s/\${MYSQL_DATABASE}/$MYSQL_DATABASE/" \
         -e "s/\${MYSQL_USER}/$MYSQL_USER/" \
         -e "s/\${MYSQL_PASSWORD}/$DB_PASSWORD/" \

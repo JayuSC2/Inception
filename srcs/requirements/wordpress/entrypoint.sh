@@ -18,6 +18,8 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
 
     # Read the DB password from the secret file
     DB_PASSWORD=$(cat "$WORDPRESS_DB_PASSWORD_FILE")
+    WP_ADMIN_PASSWORD=$(cat "$WP_ADMIN_PASSWORD_FILE")
+    WP_USER_PASSWORD=$(cat "$WP_USER_PASSWORD_FILE")
 
     # Wait for MariaDB to be ready by trying to connect with our credentials
     echo "Waiting for MariaDB database..."
