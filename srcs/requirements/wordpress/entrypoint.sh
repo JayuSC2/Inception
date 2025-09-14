@@ -9,21 +9,16 @@ if [ ! -f "$WP_PATH/wp-config-sample.php" ]; then
     cp -r /usr/src/wordpress/* "$WP_PATH/"
 fi
 
-# Set permissions for the volume at runtime
 chown -R www-data:www-data "$WP_PATH"
 
-# Check if wp-config.php exists. If not, perform the first-time setup.
 if [ ! -f "$WP_PATH/wp-config.php" ]; then
     echo "Configuring WordPress for the first time..."
 
-    # Read the DB password from the secret file
     DB_PASSWORD=$(cat "$WORDPRESS_DB_PASSWORD_FILE")
     WP_ADMIN_PASSWORD=$(cat "$WP_ADMIN_PASSWORD_FILE")
     WP_USER_PASSWORD=$(cat "$WP_USER_PASSWORD_FILE")
 
-    # Wait for MariaDB to be ready by trying to connect with our credentials
     echo "Waiting for MariaDB database..."
-    # The 'mysql' command will fail until the database is ready and the user is created.
     until mysql -h"mariadb" -u"${MYSQL_USER}" -p"${DB_PASSWORD}" -e "quit"; do
         sleep 1
         echo -n "."

@@ -8,7 +8,7 @@ services:
       MYSQL_PASSWORD_FILE: /run/secrets/db_password
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
     volumes:
-      - /home/juitz/data/mariadb:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
       - ../secrets/db_password.txt:/run/secrets/db_password:ro
       - ../secrets/db_root_password.txt:/run/secrets/db_root_password:ro
     networks:
@@ -25,7 +25,7 @@ services:
       WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
       WP_USER_PASSWORD_FILE: /run/secrets/wp_user_password
     volumes:
-      - /home/juitz/data/wordpress:/var/www/html
+      - wordpress_data:/var/www/html
       - ../secrets/db_password.txt:/run/secrets/db_password:ro
       - ../secrets/wp_admin_password.txt:/run/secrets/wp_admin_password:ro
       - ../secrets/wp_user_password.txt:/run/secrets/wp_user_password:ro
@@ -44,7 +44,7 @@ services:
     networks:
       - inception_net
     volumes:
-      - /home/juitz/data/wordpress:/var/www/html
+      - wordpress_data:/var/www/html
     depends_on:
       - wordpress
 
@@ -52,6 +52,16 @@ networks:
   inception_net:
     driver: bridge
 
-# volumes:
-#   wordpress_data:
-#   mariadb_data:
+volumes:
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/home/juitz/data/wordpress'
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/home/juitz/data/mariadb'
