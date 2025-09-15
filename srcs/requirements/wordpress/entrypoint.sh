@@ -3,21 +3,25 @@ set -e
 
 WP_PATH="/var/www/html"
 
-# Check if the directory is empty
+# Check if the directory is empty and copy files if needed
 if [ ! -f "$WP_PATH/wp-config-sample.php" ]; then
     echo "WordPress not found in volume. Copying files..."
     cp -r /usr/src/wordpress/* "$WP_PATH/"
 fi
 
+# Set permissions for the volume at runtime
 chown -R www-data:www-data "$WP_PATH"
 
+# Check if wp-config.php exists. If not, perform the first-time setup.
 if [ ! -f "$WP_PATH/wp-config.php" ]; then
     echo "Configuring WordPress for the first time..."
 
+    # Read passwords from the secret files into shell variables
     DB_PASSWORD=$(cat "$WORDPRESS_DB_PASSWORD_FILE")
     WP_ADMIN_PASSWORD=$(cat "$WP_ADMIN_PASSWORD_FILE")
     WP_USER_PASSWORD=$(cat "$WP_USER_PASSWORD_FILE")
 
+    # Wait for MariaDB to be ready, using the correct password variable
     echo "Waiting for MariaDB database..."
     until mysql -h"mariadb" -u"${MYSQL_USER}" -p"${DB_PASSWORD}" -e "quit"; do
         sleep 1
@@ -25,7 +29,7 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
     done
     echo "MariaDB is ready."
 
-    # Create wp-config.php using wp-cli
+    # Create wp-config.php
     wp config create --dbname="${MYSQL_DATABASE}" \
                      --dbuser="${MYSQL_USER}" \
                      --dbpass="${DB_PASSWORD}" \
@@ -33,7 +37,7 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
                      --path="${WP_PATH}" \
                      --allow-root
 
-    # Install WordPress core tables
+    # Install WordPress
     wp core install --url="${DOMAIN_NAME}" \
                     --title="Inception" \
                     --admin_user="${WP_ADMIN_USER}" \
@@ -42,7 +46,7 @@ if [ ! -f "$WP_PATH/wp-config.php" ]; then
                     --path="${WP_PATH}" \
                     --allow-root
 
-    # Create the additional non-admin user
+    # Create the non-admin user
     wp user create "${WP_USER}" "${WP_USER_EMAIL}" --role=author --user_pass="${WP_USER_PASSWORD}" --path="${WP_PATH}" --allow-root
 
 else
@@ -52,7 +56,6 @@ fi
 # Execute the command passed to the container (e.g., php-fpm)
 echo "Starting PHP-FPM..."
 exec "$@"
-
 ##!/bin/bash
 #
 ## Exit immediately if a command exits with a non-zero status

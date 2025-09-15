@@ -9,6 +9,10 @@ down:
 build:
 	docker compose --file $(COMPOSE_FILE) build
 
+rebuild:
+	docker compose -f $(COMPOSE_FILE) build --no-cache
+	docker compose -f $(COMPOSE_FILE) up -d
+
 clean:
 	docker compose --file $(COMPOSE_FILE) down -v
 

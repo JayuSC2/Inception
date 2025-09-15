@@ -1,51 +1,53 @@
 #!/bin/bash
+
+# Exit immediately if a command exits with a non-zero status
 set -e
 
 DATA_DIR="/var/lib/mysql"
 
-# Check if the database is already initialized.
-# We check for the 'mysql' system database directory.
-if [ ! -d "$DATA_DIR/mysql" ]; then
-    echo "Database not found. Initializing..."
+# This script only runs on the first-time creation of the volume.
+#if [ ! -d "$DATA_DIR/mysql" ]; then
+    echo "Database not initialized. Starting first-time setup..."
 
-    # 1. Initialize the MariaDB data directory.
-    # This creates the base files and system tables.
+    # 1. Initialize the database directory.
     mysql_install_db --user=mysql --datadir="$DATA_DIR"
 
-    # 2. Start the MariaDB server in the background with networking enabled.
-    # This ensures it respects the 'bind-address' from your .cnf file.
-    # We use 'exec' in a subshell to ensure proper signal handling.
-    ( exec mysqld --user=mysql --datadir="$DATA_DIR" ) &
-    PID=$!
-
-    # 3. Wait for the server to be ready for connections.
-    until mysqladmin ping >/dev/null 2>&1; do
-        echo -n "."; sleep 1
-    done
-    echo " MariaDB is ready for setup."
-
-    # 4. Read passwords from the secret files.
-    DB_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
+    # 2. Read passwords from the secret files into shell variables.
+    # The file paths are passed via the 'environment' block in docker-compose.yml
     DB_ROOT_PASSWORD=$(cat "$MYSQL_ROOT_PASSWORD_FILE")
+    DB_PASSWORD=$(cat "$MYSQL_PASSWORD_FILE")
 
-    # 5. Execute the initialization SQL script.
-    sed -e "s/\${MYSQL_DATABASE}/$MYSQL_DATABASE/" \
-        -e "s/\${MYSQL_USER}/$MYSQL_USER/" \
-        -e "s/\${MYSQL_PASSWORD}/$DB_PASSWORD/" \
-        -e "s/\${MYSQL_ROOT_PASSWORD}/$DB_ROOT_PASSWORD/" /init.sql | mysql -u root
+    # 3. Create a temporary SQL file with the setup commands.
+    cat << EOF > /tmp/init.sql
+    -- Use mysql database to modify users
+    USE mysql;
+    -- Set the root password securely
+    ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASSWORD}';
+    -- Remove anonymous users for security
+    DELETE FROM mysql.user WHERE User='';
+    -- Disallow remote root login
+    DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+    -- Create the WordPress database if it doesn't exist
+    CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+    -- Create the WordPress user, allowing connection from ANY host ('%')
+    CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
+    -- Grant all necessary privileges to the user for the WordPress database
+    GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;
+    -- Apply all the changes
+    FLUSH PRIVILEGES;
+EOF
 
-    # 6. Stop the temporary server.
-    # We use the root password we just set.
-    mysqladmin -u root -p"$DB_ROOT_PASSWORD" shutdown
-    wait $PID
-    echo "Database initialization complete."
-fi
+    # 4. Start the MariaDB server, telling it to run the init file.
+    echo "Starting MariaDB with initialization script..."
+    exec mysqld --user=mysql --datadir="$DATA_DIR" --init-file=/tmp/init.sql
 
-# Start the final MariaDB server in the foreground.
-echo "Starting MariaDB..."
+#else
+#    echo "Database already initialized. Skipping setup."
+#fi
+
+# If the database was already initialized, start the server normally.
+echo "Starting MariaDB server..."
 exec mysqld --user=mysql --datadir="$DATA_DIR"
-
-#!/bin/bash
 
 ## Exit immediately if a command exits with a non-zero status
 #set -e

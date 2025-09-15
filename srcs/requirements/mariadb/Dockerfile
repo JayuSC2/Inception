@@ -13,7 +13,7 @@ WORKDIR /var/lib/mysql
 
 COPY 50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
 
-COPY init.sql /init.sql
+#COPY init.sql /init.sql
 
 COPY entrypoint.sh /entrypoint.sh
 
