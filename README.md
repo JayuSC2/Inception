@@ -17,7 +17,6 @@ The goal is to build a mini cluster with containers, following strict rules (no 
 - **NGINX** (with TLS support)
 - **WordPress** (with PHP-FPM)
 - **MariaDB**
-- (Optional) Redis, Adminer, FTP, etc. depending on bonus implementation.
 
 ---
 
